@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/ui/login/login_viewmodel.dart'; // <-- Importación absoluta para evitar fallos
+import 'package:frontend/ui/login/login_viewmodel.dart';
+import 'package:frontend/ui/catalog/catalog_screen.dart'; // <-- Conecta el login con el catálogo nuevo
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -9,7 +10,6 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // Instanciamos el ViewModel correctamente
   final LoginViewModel _viewModel = LoginViewModel();
 
   @override
@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(
-        child: ListenableBuilder( // Usamos el Builder nativo de Flutter para escuchar los cambios
+        child: ListenableBuilder(
           listenable: _viewModel,
           builder: (context, child) {
             return SingleChildScrollView(
@@ -25,7 +25,6 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Icono botánico de Rootmie
                   Icon(
                     Icons.local_florist_rounded,
                     size: 100,
@@ -47,7 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Campo de texto: Correo
                   TextField(
                     onChanged: _viewModel.setEmail,
                     keyboardType: TextInputType.emailAddress,
@@ -65,7 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Campo de texto: Contraseña
                   TextField(
                     onChanged: _viewModel.setPassword,
                     obscureText: true,
@@ -83,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 35),
 
-                  // Botón de Ingreso con cambio de estado dinámico
                   _viewModel.isLoading
                       ? CircularProgressIndicator(color: Colors.green[700])
                       : SizedBox(
@@ -104,8 +100,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             SnackBar(
                               backgroundColor: Colors.green[900],
                               content: Text('¡Éxito! Entrando como: $resultado'),
+                              duration: const Duration(milliseconds: 800),
                             ),
                           );
+
+                          // Pequeña pausa estética para ver el cartel de bienvenida
+                          await Future.delayed(const Duration(milliseconds: 900));
+
+                          if (mounted) {
+                            // Da el salto a la pantalla de catálogo reemplazando el Login
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const CatalogScreen()),
+                            );
+                          }
                         }
                       },
                       child: const Text(
