@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'catalog_viewmodel.dart';
+import 'categories_data.dart'; // <-- Importamos las nuevas categorías
+import 'package:frontend/ui/admin/admin_screen.dart';
+import 'package:frontend/ui/botanic/botanic_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key});
+  final String userRole;
+  const CatalogScreen({super.key, this.userRole = 'CLIENTE'});
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -10,7 +14,9 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   final CatalogViewModel _viewModel = CatalogViewModel();
-  final List<String> _categories = ['Todas', 'Interior', 'Exterior', 'Suculentas'];
+
+  // Creamos la lista de filtros agregando "Todas" al principio de tus categorías
+  final List<String> _filterCategories = ['Todas', ...rootmieCategories];
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +31,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         actions: [
+          if (widget.userRole == 'ADMIN' || widget.userRole == 'AUXILIAR')
+            IconButton(
+              icon: const Icon(Icons.admin_panel_settings, color: Colors.amber, size: 28),
+              tooltip: 'Acceder al Panel de Control',
+              onPressed: () {
+                Widget panelDestino = widget.userRole == 'ADMIN'
+                    ? const AdminScreen()
+                    : const BotanicScreen();
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => panelDestino),
+                );
+              },
+            ),
           ListenableBuilder(
             listenable: _viewModel,
             builder: (context, child) {
@@ -37,18 +58,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       if (_viewModel.cartCount > 0) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('¡Pedido simulado de ${_viewModel.cartCount} plantas enviado! 🌿'),
+                            content: Text('¡Pedido simulado de ${_viewModel.cartCount} items enviado! 🌿'),
                             backgroundColor: Colors.green[900],
                           ),
                         );
                         _viewModel.clearCart();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('El carrito está vacío. Añade plantas.'),
-                            backgroundColor: Colors.amber,
-                          ),
-                        );
                       }
                     },
                   ),
@@ -58,21 +72,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       top: 8,
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
+                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                         child: Text(
                           '${_viewModel.cartCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -88,15 +92,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
         builder: (context, child) {
           return Column(
             children: [
-              // Filtros superiores (Pestañas deslizables)
+              // Filtros superiores deslizables con tus 9 categorías
               Container(
                 height: 60,
                 padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length,
+                  itemCount: _filterCategories.length,
                   itemBuilder: (context, index) {
-                    final cat = _categories[index];
+                    final cat = _filterCategories[index];
                     final isSelected = _viewModel.selectedCategory == cat;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
@@ -117,7 +121,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   },
                 ),
               ),
-              // Cuadrícula de plantas en venta
+              // Cuadrícula del catálogo
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -132,23 +136,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     itemBuilder: (context, index) {
                       final plant = _viewModel.filteredPlants[index];
                       return Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         elevation: 2,
                         clipBehavior: Clip.antiAlias,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Expanded(
-                              child: Image.network(
-                                plant.imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    Container(
-                                      color: Colors.green[50],
-                                      child: const Icon(Icons.local_florist, color: Colors.green, size: 40),
-                                    ),
+                              child: Container(
+                                color: Colors.green[50],
+                                child: const Icon(Icons.eco_outlined, color: Colors.green, size: 40),
                               ),
                             ),
                             Padding(
@@ -165,11 +162,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     '\$${plant.price.toStringAsFixed(0)} COP',
-                                    style: TextStyle(
-                                      color: Colors.green[700],
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
+                                    style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 14),
                                   ),
                                   const SizedBox(height: 8),
                                   SizedBox(
@@ -179,24 +172,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: Colors.green[700],
                                         elevation: 0,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                       ),
                                       onPressed: () {
                                         _viewModel.addToCart();
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('${plant.name} añadida 🛒'),
-                                            duration: const Duration(milliseconds: 500),
-                                            backgroundColor: Colors.green[800],
-                                          ),
-                                        );
                                       },
-                                      child: const Text(
-                                        'Agregar',
-                                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                                      ),
+                                      child: const Text('Agregar', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                                     ),
                                   )
                                 ],
