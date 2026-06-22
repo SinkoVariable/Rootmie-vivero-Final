@@ -1,78 +1,86 @@
 import 'package:flutter/material.dart';
-
-class PlantItem {
-  final String name;
-  final String category;
-  final double price;
-  final String imageUrl;
-
-  PlantItem({
-    required this.name,
-    required this.category,
-    required this.price,
-    required this.imageUrl,
-  });
-}
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../data/models/product_model.dart';
 
 class CatalogViewModel extends ChangeNotifier {
-  int _cartCount = 0;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  List<ProductModel> _allProducts = [];
+  List<ProductModel> _filteredPlants = [];
   String _selectedCategory = 'Todas';
+  int _cartCount = 0;
 
-  int get cartCount => _cartCount;
+
+  List<ProductModel> get filteredPlants => _filteredPlants;
   String get selectedCategory => _selectedCategory;
+  int get cartCount => _cartCount;
 
-  // Lista simulada de plantas de Rootmie con imágenes botánicas de internet
-  final List<PlantItem> _allPlants = [
-    PlantItem(
-      name: 'Monstera Deliciosa',
-      category: 'Interior',
-      price: 25000,
-      imageUrl: 'https://images.unsplash.com/photo-1614594975525-e45190c55d0b?q=80&w=400&auto=format&fit=crop',
-    ),
-    PlantItem(
-      name: 'Suculenta Cebra',
-      category: 'Suculentas',
-      price: 8000,
-      imageUrl: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=400&auto=format&fit=crop',
-    ),
-    PlantItem(
-      name: 'Helecho Boston',
-      category: 'Interior',
-      price: 15000,
-      imageUrl: 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?q=80&w=400&auto=format&fit=crop',
-    ),
-    PlantItem(
-      name: 'Árbol de Jade',
-      category: 'Exterior',
-      price: 12000,
-      imageUrl: 'https://images.unsplash.com/photo-1599599810769-bcde5a160d32?q=80&w=400&auto=format&fit=crop',
-    ),
-    PlantItem(
-      name: 'Cactus Candelabro',
-      category: 'Suculentas',
-      price: 18000,
-      imageUrl: 'https://images.unsplash.com/photo-1508022047306-0397ab7df462?q=80&w=400&auto=format&fit=crop',
-    ),
-    PlantItem(
-      name: 'Palmera de Salón',
-      category: 'Exterior',
-      price: 30000,
-      imageUrl: 'https://images.unsplash.com/photo-1517256064527-09c53b2d0c6b?q=80&w=400&auto=format&fit=crop',
-    ),
-  ];
+  CatalogViewModel() {
+    _listenToProducts();
+  }
 
-  // Filtra las plantas en base a la categoría que toques
-  List<PlantItem> get filteredPlants {
-    if (_selectedCategory == 'Todas') {
-      return _allPlants;
-    }
-    return _allPlants.where((plant) => plant.category == _selectedCategory).toList();
+
+  void _listenToProducts() {
+
+    _firestore.collection('productos').snapshots().listen((snapshot) {
+
+      debugPrint("📦 Conexión establecida. Documentos encontrados: ${snapshot.docs.length}");
+
+      _allProducts = snapshot.docs.map((doc) {
+        final data = doc.data();
+
+
+        debugPrint("📄 Datos del Doc [${doc.id}]: $data");
+
+
+        final String nombreDetectado = data['nombre'] ?? data['name'] ?? 'Sin nombre';
+        final String descripcionDetectada = data['descripcion'] ?? data['description'] ?? '';
+        final String categoriaDetectada = data['categoria'] ?? data['category'] ?? 'Plantas de Interior';
+        final double precioDetectado = (data['precio'] ?? data['price'] ?? 0).toDouble();
+        final int stockDetectado = data['stock'] ?? 0;
+        final String skuDetectado = data['sku'] ?? '';
+        final String imagenUrlDetectada = data['imagenUrl'] ?? data['imageUrl'] ?? '';
+
+        return ProductModel(
+          id: doc.id,
+          nombre: nombreDetectado,
+          descripcion: descripcionDetectada,
+          categoria: categoriaDetectada,
+          precio: precioDetectado,
+          stock: stockDetectado,
+          sku: skuDetectado,
+          imagenUrl: imagenUrlDetectada,
+        );
+      }).toList();
+
+
+      _applyFilter();
+    }, onError: (error) {
+      debugPrint("❌ ERROR AL LEER FIRESTORE: $error");
+    });
   }
 
   void selectCategory(String category) {
     _selectedCategory = category;
+    _applyFilter();
+  }
+
+
+  void _applyFilter() {
+    if (_selectedCategory.trim().toLowerCase() == 'todas') {
+      _filteredPlants = List.from(_allProducts);
+    } else {
+      _filteredPlants = _allProducts.where((product) {
+        final productoCat = product.categoria.trim().toLowerCase();
+        final filtroCat = _selectedCategory.trim().toLowerCase();
+        return productoCat == filtroCat;
+      }).toList();
+    }
+
+
     notifyListeners();
   }
+
 
   void addToCart() {
     _cartCount++;

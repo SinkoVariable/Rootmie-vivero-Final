@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "243745630044",
+    "project_id": "rootmie-vivero-a109c",
+    "storage_bucket": "rootmie-vivero-a109c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:243745630044:android:4b3bbfc9e546ce8f698399",
+        "android_client_info": {
+          "package_name": "com.example.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhHVzGYPcTcg_Om27lCC2IVj5uipPtdpc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

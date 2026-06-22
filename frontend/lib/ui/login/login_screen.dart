@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/ui/login/login_viewmodel.dart';
+import 'login_viewmodel.dart';
+import 'register_screen.dart';
 import 'package:frontend/ui/catalog/catalog_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text('Rootmie', style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Colors.green[900], letterSpacing: 1.2)),
                   const Text('Tu vivero digital', style: TextStyle(color: Colors.grey, fontSize: 16)),
                   const SizedBox(height: 40),
+
                   TextField(
                     onChanged: _viewModel.setEmail,
                     keyboardType: TextInputType.emailAddress,
@@ -50,6 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 35),
+
                   _viewModel.isLoading
                       ? CircularProgressIndicator(color: Colors.green[700])
                       : SizedBox(
@@ -61,20 +64,46 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       onPressed: () async {
-                        String rol = await _viewModel.loginUsuario();
+
+                        String rol = await _viewModel.loginUsuarioReal();
+
                         if (mounted) {
-                          // Siempre viaja al Catálogo, pero enviando el "rol" obtenido
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => CatalogScreen(userRole: rol),
-                            ),
-                          );
+                          if (rol == 'ERROR') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Usuario o contraseña incorrectos ❌'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          } else {
+                            // Acceso concedido con el rol de la base de datos
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CatalogScreen(userRole: rol),
+                              ),
+                            );
+                          }
                         }
                       },
                       child: const Text('Iniciar Sesión', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
+
+                  const SizedBox(height: 25),
+                  // BOTÓN PARA IR A LA PANTALLA DE REGISTRO
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                      );
+                    },
+                    child: Text(
+                      '¿No tienes cuenta? Regístrate aquí',
+                      style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.w600),
+                    ),
+                  )
                 ],
               ),
             );

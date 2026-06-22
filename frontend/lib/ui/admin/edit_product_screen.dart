@@ -1,95 +1,113 @@
-import 'package:frontend/ui/catalog/categories_data.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../data/models/product_model.dart';
+import '../inventory/inventory_viewmodel.dart';
 
 class EditProductScreen extends StatefulWidget {
-  // Parámetros obligatorios que debe recibir de la pantalla de selección
-  final String initialName;
-  final double initialPrice;
-  final int initialStock;
-  final String initialCategory;
-  final String initialDescription;
-
-  const EditProductScreen({
-    super.key,
-    required this.initialName,
-    required this.initialPrice,
-    required this.initialStock,
-    required this.initialCategory,
-    required this.initialDescription,
-  });
+  final ProductModel producto;
+  const EditProductScreen({super.key, required this.producto});
 
   @override
   State<EditProductScreen> createState() => _EditProductScreenState();
 }
 
 class _EditProductScreenState extends State<EditProductScreen> {
-  bool _isActive = true;
-  late String _selectedCategory;
+  final InventoryViewModel _inventoryVM = InventoryViewModel();
+  final _formKey = GlobalKey<FormState>();
 
-  // Controladores de texto vacíos que inicializaremos en el initState
-  late TextEditingController _nameController;
-  late TextEditingController _priceController;
-  late TextEditingController _stockController;
-  late TextEditingController _descController;
+  late String _nombre;
+  late String _descripcion;
+  late String _categoria;
+  late double _precio;
+  late int _stock;
+  late String _sku;
+  bool _isLoading = false;
+
+
+  final List<String> _categorias = [
+    'Plantas de Interior',
+    'Exterior',
+    'Cactus',
+    'Fertilizantes',
+    'Herramientas',
+    'Tratamiento',
+    'Macetas',
+    'Decoraciones',
+    'Sustratos'
+  ];
 
   @override
   void initState() {
     super.initState();
-    // Asignamos los valores que nos llegaron desde la pantalla de selección
-    _selectedCategory = widget.initialCategory;
-    _nameController = TextEditingController(text: widget.initialName);
-    _priceController = TextEditingController(text: widget.initialPrice.toStringAsFixed(0));
-    _stockController = TextEditingController(text: widget.initialStock.toString());
-    _descController = TextEditingController(text: widget.initialDescription);
+    _nombre = widget.producto.nombre;
+    _descripcion = widget.producto.descripcion;
+    _precio = widget.producto.precio;
+    _stock = widget.producto.stock;
+    _sku = widget.producto.sku;
+
+
+    final catOriginal = widget.producto.categoria.trim();
+    _categoria = _categorias.any((element) => element.toLowerCase() == catOriginal.toLowerCase())
+        ? _categorias.firstWhere((element) => element.toLowerCase() == catOriginal.toLowerCase())
+        : _categorias.first;
   }
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _priceController.dispose();
-    _stockController.dispose();
-    _descController.dispose();
-    super.dispose();
-  }
 
-  // Desplegamos el menú inferior con tus 9 categorías exactas
-  void _showCategoryMenu() {
-    showModalBottomSheet(
+  void _mostrarDialogoEliminar() {
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
             children: [
-              const Padding(
-                padding: EdgeInsets.only(left: 8.0, bottom: 12),
-                child: Text('Modificar Categoría', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-              ),
-              const Divider(),
-              Expanded(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: rootmieCategories.length,
-                  itemBuilder: (context, index) {
-                    final category = rootmieCategories[index];
-                    final isSelected = _selectedCategory == category;
-                    return ListTile(
-                      title: Text(category, style: TextStyle(color: isSelected ? Colors.green[800] : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                      leading: Icon(Icons.label_important_outline_rounded, color: isSelected ? Colors.green[700] : Colors.grey),
-                      trailing: isSelected ? const Icon(Icons.check_circle, color: Colors.green) : null,
-                      onTap: () {
-                        setState(() { _selectedCategory = category; });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
-              ),
+              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Text('¿Eliminar Producto?', style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
+          content: Text('Esta acción eliminará permanentemente "$_nombre" del inventario y del catálogo. No se puede deshacer. ⚠️'),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              onPressed: () => Navigator.pop(dialogContext),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[700],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+              child: const Text('Eliminar Completamente', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              onPressed: () async {
+                Navigator.pop(dialogContext); // Cierra el diálogo
+                setState(() => _isLoading = true);
+
+                try {
+
+                  await FirebaseFirestore.instance.collection('productos').doc(widget.producto.id).delete();
+
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('"$_nombre" ha sido eliminado con éxito 🌿'),
+                        backgroundColor: Colors.red[900],
+                      ),
+                    );
+                    Navigator.pop(context);
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error al eliminar: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isLoading = false);
+                }
+              },
+            ),
+          ],
         );
       },
     );
@@ -100,125 +118,145 @@ class _EditProductScreenState extends State<EditProductScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Modificar Item', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blueGrey[900],
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
+        title: const Text('Modificar Insumo', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.green[900],
+        elevation: 0.5,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.green[900]),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Editar Producto Comercial ✏️', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-            const SizedBox(height: 8),
-            const Text('Ajusta el precio, el stock actual o inhabilita el producto de Rootmie.', style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 20),
-
-            // Interruptor para Inhabilitar (RF001-2)
-            Container(
-              decoration: BoxDecoration(
-                color: _isActive ? Colors.green[50] : Colors.red[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _isActive ? Colors.green[200]! : Colors.red[200]!),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                initialValue: _nombre,
+                decoration: InputDecoration(labelText: 'Nombre del Producto', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                validator: (val) => val == null || val.isEmpty ? 'Campo requerido' : null,
+                onSaved: (val) => _nombre = val ?? '',
               ),
-              child: SwitchListTile(
-                title: Text(_isActive ? 'Item Activo en Tienda' : 'Item Inhabilitado', style: TextStyle(fontWeight: FontWeight.bold, color: _isActive ? Colors.green[900] : Colors.red[900])),
-                value: _isActive,
-                activeColor: Colors.green[700],
-                onChanged: (bool value) { setState(() { _isActive = value; }); },
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: _descripcion,
+                decoration: InputDecoration(labelText: 'Descripción', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                maxLines: 3,
+                onSaved: (val) => _descripcion = val ?? '',
               ),
-            ),
-            const SizedBox(height: 20),
-
-            _buildTextField('Nombre del Producto', Icons.inventory_2_outlined, _nameController),
-            const SizedBox(height: 15),
-
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _buildTextField('Precio (COP)', Icons.attach_money_rounded, _priceController, keyboardType: TextInputType.number),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  flex: 2,
-                  child: _buildTextField('Unidades (Stock Físico)', Icons.pin_rounded, _stockController, keyboardType: TextInputType.number),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Selector interactivo de categoría
-            const Text('Categoría del Catálogo', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 14)),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: _showCategoryMenu,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(border: Border.all(color: Colors.grey[400]!), borderRadius: BorderRadius.circular(12), color: Colors.grey[50]),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.category_outlined, color: Colors.green[700]),
-                        const SizedBox(width: 12),
-                        Text(_selectedCategory, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-                      ],
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _categoria,
+                decoration: InputDecoration(labelText: 'Categoría', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                items: _categorias.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+                onChanged: (val) => setState(() => _categoria = val ?? 'Plantas de Interior'),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _precio.toString(),
+                      decoration: InputDecoration(labelText: 'Precio (\$)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      keyboardType: TextInputType.number,
+                      validator: (val) => val == null || double.tryParse(val) == null ? 'Precio inválido' : null,
+                      onSaved: (val) => _precio = double.parse(val ?? '0'),
                     ),
-                    const Icon(Icons.arrow_drop_down, color: Colors.blueGrey),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            _buildTextField('Descripción / Indicaciones', Icons.description_outlined, _descController, maxLines: 3),
-            const SizedBox(height: 30),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blueGrey[800], shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(_isActive
-                          ? '¡"${_nameController.text}" actualizado correctamente! ✅'
-                          : '¡Item modificado e Inhabilitado de Rootmie! 🔒'),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _stock.toString(),
+                      decoration: InputDecoration(labelText: 'Stock Actual', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      keyboardType: TextInputType.number,
+                      validator: (val) => val == null || int.tryParse(val) == null ? 'Cantidad inválida' : null,
+                      onSaved: (val) => _stock = int.parse(val ?? '0'),
                     ),
-                  );
-                  Navigator.pop(context); // Cierra el formulario regresando a la lista
-                },
-                child: const Text('Actualizar Catálogo', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+              const SizedBox(height: 16),
+              TextFormField(
+                initialValue: _sku,
+                decoration: InputDecoration(labelText: 'Código SKU', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                validator: (val) => val == null || val.isEmpty ? 'Código requerido' : null,
+                onSaved: (val) => _sku = val ?? '',
+              ),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Colors.green))
+                  : Column(
+                children: [
+                  // Botón de Actualizar Existente
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber[700],
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                      ),
+                      onPressed: () async {
+                        if (_formKey.currentState?.validate() ?? false) {
+                          _formKey.currentState?.save();
+                          setState(() => _isLoading = true);
 
-  Widget _buildTextField(String label, IconData icon, TextEditingController controller, {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 14)),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: Colors.green[700]),
-            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ProductModel productoEditado = ProductModel(
+                            id: widget.producto.id,
+                            nombre: _nombre,
+                            descripcion: _descripcion,
+                            categoria: _categoria,
+                            precio: _precio,
+                            stock: _stock,
+                            sku: _sku,
+                            imagenUrl: widget.producto.imagenUrl,
+                          );
+
+                          bool exito = await _inventoryVM.actualizarProducto(widget.producto.id, productoEditado);
+                          setState(() => _isLoading = false);
+
+                          if (mounted && exito) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Inventario actualizado correctamente 🔄'),
+                                    backgroundColor: Colors.amber
+                                )
+                            );
+                            Navigator.pop(context);
+                          }
+                        }
+                      },
+                      child: const Text('Actualizar Producto', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  //  ELIMINAR COMPLETAMENTE
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.red[700]!, width: 1.5),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: Icon(Icons.delete_outline_rounded, color: Colors.red[700]),
+                      label: Text(
+                        'Eliminar Producto del Sistema',
+                        style: TextStyle(color: Colors.red[700], fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: _mostrarDialogoEliminar,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

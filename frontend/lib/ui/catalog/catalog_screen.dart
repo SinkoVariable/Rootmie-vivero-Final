@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'catalog_viewmodel.dart';
-import 'categories_data.dart'; // <-- Importamos las nuevas categorías
-import 'package:frontend/ui/admin/admin_screen.dart';
-import 'package:frontend/ui/botanic/botanic_screen.dart';
+import 'categories_data.dart';
+
+
+import '../admin/admin_screen.dart';
+import '../botanic/botanic_screen.dart';
+import '../../../data/models/product_model.dart';
+
+import 'product_detail_screen.dart';
+import 'cart_screen.dart';
+import 'cart_viewmodel.dart';
+import 'profile_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   final String userRole;
@@ -14,9 +24,49 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   final CatalogViewModel _viewModel = CatalogViewModel();
+  final CartViewModel _cartVM = CartViewModel();
+  late List<String> _filterCategories;
 
-  // Creamos la lista de filtros agregando "Todas" al principio de tus categorías
-  final List<String> _filterCategories = ['Todas', ...rootmieCategories];
+  @override
+  void initState() {
+    super.initState();
+    _filterCategories = ['Todas', ...rootmieCategories];
+  }
+
+
+  void _mostrarDialogoCerrarSesion(BuildContext contextScaffold) {
+    showDialog(
+      context: contextScaffold,
+      builder: (contextDialog) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cerrar Sesión', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('¿Estás seguro de que deseas salir de tu cuenta en Rootmie Vivero?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(contextDialog),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[700],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              Navigator.pop(contextDialog);
+
+              await FirebaseAuth.instance.signOut();
+
+              if (contextScaffold.mounted) {
+
+                Navigator.of(contextScaffold).pushNamedAndRemoveUntil('/', (route) => false);
+              }
+            },
+            child: const Text('Salir', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +96,22 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 );
               },
             ),
+
+
+          IconButton(
+            icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
+            tooltip: 'Mi Perfil',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
+          ),
+
+
           ListenableBuilder(
-            listenable: _viewModel,
+            listenable: _cartVM,
             builder: (context, child) {
               return Stack(
                 alignment: Alignment.center,
@@ -55,18 +119,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   IconButton(
                     icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
                     onPressed: () {
-                      if (_viewModel.cartCount > 0) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('¡Pedido simulado de ${_viewModel.cartCount} items enviado! 🌿'),
-                            backgroundColor: Colors.green[900],
-                          ),
-                        );
-                        _viewModel.clearCart();
-                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const CartScreen()),
+                      );
                     },
                   ),
-                  if (_viewModel.cartCount > 0)
+                  if (_cartVM.totalUnidades > 0)
                     Positioned(
                       right: 8,
                       top: 8,
@@ -75,7 +134,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
                         constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                         child: Text(
-                          '${_viewModel.cartCount}',
+                          '${_cartVM.totalUnidades}',
                           style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
@@ -85,6 +144,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
               );
             },
           ),
+
+
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white70, size: 24),
+            tooltip: 'Cerrar Sesión',
+            onPressed: () => _mostrarDialogoCerrarSesion(context),
+          ),
         ],
       ),
       body: ListenableBuilder(
@@ -92,7 +158,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         builder: (context, child) {
           return Column(
             children: [
-              // Filtros superiores deslizables con tus 9 categorías
+
               Container(
                 height: 60,
                 padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -101,14 +167,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   itemCount: _filterCategories.length,
                   itemBuilder: (context, index) {
                     final cat = _filterCategories[index];
-                    final isSelected = _viewModel.selectedCategory == cat;
+                    final isSelected = _viewModel.selectedCategory.trim().toLowerCase() == cat.trim().toLowerCase();
+
                     return Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: FilterChip(
                         label: Text(cat),
                         selected: isSelected,
                         onSelected: (bool selected) {
-                          _viewModel.selectCategory(cat);
+                          setState(() {
+                            _viewModel.selectCategory(cat);
+                          });
                         },
                         selectedColor: Colors.green[100],
                         checkmarkColor: Colors.green[800],
@@ -121,70 +190,159 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   },
                 ),
               ),
-              // Cuadrícula del catálogo
+
+
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: GridView.builder(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.72,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: _viewModel.filteredPlants.length,
-                    itemBuilder: (context, index) {
-                      final plant = _viewModel.filteredPlants[index];
-                      return Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 2,
-                        clipBehavior: Clip.antiAlias,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: Container(
-                                color: Colors.green[50],
-                                child: const Icon(Icons.eco_outlined, color: Colors.green, size: 40),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12.0),
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance.collection('productos').snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator(color: Colors.green));
+                      }
+
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No hay plantas cargadas en la colección "productos" 🌿',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        );
+                      }
+
+
+                      final List<ProductModel> productosActivos = [];
+
+                      for (var doc in snapshot.data!.docs) {
+                        final data = doc.data() as Map<String, dynamic>;
+
+
+                        final bool activo = data['activo'] ?? true;
+
+                        //  Si el producto fue inhabilitado (activo == false), lo saltamos del catálogo
+                        if (!activo) {
+                          continue;
+                        }
+
+                        productosActivos.add(
+                          ProductModel(
+                            id: doc.id,
+                            nombre: data['nombre'] ?? data['name'] ?? 'Sin nombre',
+                            descripcion: data['descripcion'] ?? data['description'] ?? '',
+                            categoria: data['categoria'] ?? data['category'] ?? 'Plantas de Interior',
+                            precio: (data['precio'] ?? data['price'] ?? 0).toDouble(),
+                            stock: data['stock'] ?? 0,
+                            sku: data['sku'] ?? '',
+                            imagenUrl: data['imagenUrl'] ?? data['imageUrl'] ?? '',
+                          ),
+                        );
+                      }
+
+                      // Filtro secundario por categoría seleccionada en la UI
+                      final productosFiltrados = productosActivos.where((plant) {
+                        if (_viewModel.selectedCategory.trim().toLowerCase() == 'todas') return true;
+                        return plant.categoria.trim().toLowerCase() == _viewModel.selectedCategory.trim().toLowerCase();
+                      }).toList();
+
+                      if (productosFiltrados.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No hay plantas disponibles en esta categoría 🌿',
+                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                          ),
+                        );
+                      }
+
+                      return GridView.builder(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.70,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
+                        itemCount: productosFiltrados.length,
+                        itemBuilder: (context, index) {
+                          final ProductModel plant = productosFiltrados[index];
+
+                          return Card(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 2,
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ProductDetailScreen(product: plant),
+                                  ),
+                                );
+                              },
                               child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Text(
-                                    plant.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '\$${plant.price.toStringAsFixed(0)} COP',
-                                    style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 14),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 32,
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green[700],
-                                        elevation: 0,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      onPressed: () {
-                                        _viewModel.addToCart();
-                                      },
-                                      child: const Text('Agregar', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                  Expanded(
+                                    child: Container(
+                                      color: Colors.green[50],
+                                      child: plant.imagenUrl.isNotEmpty
+                                          ? Image.network(
+                                        plant.imagenUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          return const Icon(Icons.broken_image_outlined, color: Colors.green, size: 36);
+                                        },
+                                      )
+                                          : const Icon(Icons.eco_outlined, color: Colors.green, size: 40),
                                     ),
-                                  )
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          plant.nombre,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '\$${plant.precio.toStringAsFixed(0)} COP',
+                                          style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 14),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        SizedBox(
+                                          width: double.infinity,
+                                          height: 32,
+                                          child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green[700],
+                                              elevation: 0,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            onPressed: () {
+                                              _cartVM.agregarProducto(plant, cantidadSolicitada: 1);
+
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text('"${plant.nombre}" agregado al carrito 🌿'),
+                                                  backgroundColor: Colors.green[900],
+                                                  duration: const Duration(seconds: 1),
+                                                ),
+                                              );
+                                            },
+                                            child: const Text('Agregar', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       );
                     },
                   ),

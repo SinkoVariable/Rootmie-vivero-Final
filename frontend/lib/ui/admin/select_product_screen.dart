@@ -1,73 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../../data/models/product_model.dart';
+import '../inventory/inventory_viewmodel.dart';
 import 'edit_product_screen.dart';
-
-// Definimos un modelo de datos simple para representar el inventario actual
-class InventoryItem {
-  final String name;
-  final double price;
-  final int stock;
-  final String category;
-  final String description;
-  final IconData icon;
-
-  InventoryItem({
-    required this.name,
-    required this.price,
-    required this.stock,
-    required this.category,
-    required this.description,
-    required this.icon,
-  });
-}
 
 class SelectProductScreen extends StatelessWidget {
   const SelectProductScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Lista simulada de los productos actuales en la base de datos de Rootmie
-    final List<InventoryItem> currentInventory = [
-      InventoryItem(
-        name: 'Monstera Deliciosa',
-        price: 25000,
-        stock: 14,
-        category: 'Planta de interior',
-        description: 'Planta de sombra ideal para interiores, requiere riego moderado una vez a la semana.',
-        icon: Icons.eco_outlined,
-      ),
-      InventoryItem(
-        name: 'Fertilizante Orgánico Humus 5Kg',
-        price: 16000,
-        stock: 35,
-        category: 'Fertilizante',
-        description: 'Nutrición 100% natural para el crecimiento radicular y fortalecimiento de hojas.',
-        icon: Icons.science_outlined,
-      ),
-      InventoryItem(
-        name: 'Cactus de Pascua',
-        price: 9000,
-        stock: 8,
-        category: 'Cactus',
-        description: 'Pequeño cactus ornamental con flores coloridas de fácil cuidado bajo el sol.',
-        icon: Icons.wb_sunny_outlined, // <-- CORREGIDO: Usamos un ícono directo y válido
-      ),
-      InventoryItem(
-        name: 'Tijeras de Poda Professional',
-        price: 42000,
-        stock: 5,
-        category: 'Herramientas',
-        description: 'Hojas de acero inoxidable de alta precisión para ramas de hasta 2cm.',
-        icon: Icons.handyman_outlined,
-      ),
-      InventoryItem(
-        name: 'Maceta de Arcilla Clásica',
-        price: 12000,
-        stock: 22,
-        category: 'Macetas',
-        description: 'Maceta de barro cocido con excelente filtración de agua para proteger raíces.',
-        icon: Icons.layers_outlined,
-      ),
-    ];
+    final InventoryViewModel inventoryVM = InventoryViewModel();
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -76,6 +18,10 @@ class SelectProductScreen extends StatelessWidget {
         backgroundColor: Colors.blueGrey[900],
         iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,79 +41,118 @@ class SelectProductScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: currentInventory.length,
-              itemBuilder: (context, index) {
-                final item = currentInventory[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  elevation: 1,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.green[50],
-                      child: Icon(item.icon, color: Colors.green[800]),
-                    ),
-                    title: Text(
-                      item.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 6.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              item.category,
-                              style: const TextStyle(fontSize: 11, color: Colors.black54),
-                            ),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('productos').snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Colors.green));
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text('No hay productos en la base de datos 🌿'));
+                }
+
+                final docs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final doc = docs[index];
+                    final data = doc.data() as Map<String, dynamic>;
+
+                    final String id = doc.id;
+                    final String nombre = data['nombre'] ?? 'Sin nombre';
+                    final String categoria = data['categoria'] ?? 'Plantas de Interior';
+                    final double precio = (data['precio'] ?? 0).toDouble();
+                    final int stock = data['stock'] ?? 0;
+                    final String url = data['imagenUrl'] ?? '';
+                    final bool activo = data['activo'] ?? true;
+
+                    final productoReal = ProductModel(
+                      id: id,
+                      nombre: nombre,
+                      categoria: categoria,
+                      precio: precio,
+                      stock: stock,
+                      descripcion: data['descripcion'] ?? '',
+                      sku: data['sku'] ?? '',
+                      imagenUrl: url,
+                    );
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 1,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () {
+                          _mostrarOpciones(context, inventoryVM, productoReal, activo);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: Colors.green[50],
+                                child: Icon(_obtenerIconoCategoria(categoria), color: Colors.green[800]),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      nombre,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            categoria,
+                                            style: const TextStyle(fontSize: 11, color: Colors.black54),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Text(
+                                          'Stock: $stock uds',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: stock <= 5 ? Colors.red[700] : Colors.grey[600],
+                                            fontWeight: stock <= 5 ? FontWeight.bold : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '\$${precio.toStringAsFixed(0)}',
+                                    style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 15),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                                ],
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Stock: ${item.stock} uds',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: item.stock <= 5 ? Colors.red[700] : Colors.grey[600],
-                              fontWeight: item.stock <= 5 ? FontWeight.bold : FontWeight.normal,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '\$${item.price.toStringAsFixed(0)}',
-                          style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                        const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
-                      ],
-                    ),
-                    onTap: () {
-                      // 🚀 ¡AQUÍ OCURRE LA MAGIA! Al tocarlo, viajamos al formulario pasándole las propiedades reales
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => EditProductScreen(
-                            initialName: item.name,
-                            initialPrice: item.price,
-                            initialStock: item.stock,
-                            initialCategory: item.category,
-                            initialDescription: item.description,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                    );
+                  },
                 );
               },
             ),
@@ -175,5 +160,74 @@ class SelectProductScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _mostrarOpciones(BuildContext context, InventoryViewModel inventoryVM, ProductModel producto, bool activo) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.eco_outlined, color: Colors.green),
+                title: Text(producto.nombre, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(activo ? 'Estado: Visible en Catálogo' : 'Estado: Oculto (Inhabilitado)'),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined, color: Colors.blue),
+                title: const Text('Modificar datos del producto'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => EditProductScreen(producto: producto),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  activo ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: activo ? Colors.red : Colors.green,
+                ),
+                title: Text(activo ? 'Inhabilitar del catálogo' : 'Habilitar en catálogo'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  await inventoryVM.inhabilitarProducto(producto.id, !activo);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(activo ? 'Producto ocultado con éxito 🚫' : 'Producto habilitado con éxito 🌿'),
+                        backgroundColor: activo ? Colors.red : Colors.green,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
+  IconData _obtenerIconoCategoria(String categoria) {
+    switch (categoria.toLowerCase().trim()) {
+      case 'plantas de interior': return Icons.home_max_outlined;
+      case 'exterior': return Icons.nature_people_outlined;
+      case 'cactus': return Icons.tsunami_outlined;
+      case 'fertilizantes': return Icons.science_outlined;
+      case 'herramientas': return Icons.handyman_outlined;
+      case 'tratamiento': return Icons.health_and_safety_outlined;
+      case 'macetas': return Icons.inventory_2_outlined;
+      case 'decoraciones': return Icons.wb_sunny_outlined;
+      case 'sustratos': return Icons.layers_rounded;
+      default: return Icons.eco_rounded;
+    }
   }
 }

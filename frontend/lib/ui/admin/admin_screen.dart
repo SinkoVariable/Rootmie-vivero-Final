@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'add_product_screen.dart'; // <-- Importar pantalla de agregar
-import 'select_product_screen.dart'; // <-- CAMBIADO: Ahora importamos la pantalla de selección visual
+import 'package:firebase_auth/firebase_auth.dart';
+import 'add_product_screen.dart';
+import 'select_product_screen.dart';
+import 'alerts_config_screen.dart';
+import 'admin_orders_screen.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -8,63 +11,136 @@ class AdminScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF7F7F9),
       appBar: AppBar(
-        title: const Text('Panel Administrator', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blueGrey[900],
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Acciones del Sistema',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87, fontSize: 20),
+        ),
+        backgroundColor: const Color(0xFFF7F7F9),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          tooltip: 'Volver al Catálogo',
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+            tooltip: 'Cerrar Sesión',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('¿Cerrar Sesión?'),
+                    content: const Text('Tendrás que volver a ingresar tus credenciales para acceder al panel.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          await FirebaseAuth.instance.signOut();
+                        },
+                        child: const Text('Salir', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '¡Bienvenido, Admin! 🛠️',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+            // 1️ Agregar Nuevo Producto
+            _buildMenuCard(
+              context: context,
+              title: 'Agregar Nuevo Producto ',
+              subtitle: 'Sube nuevas plantas al catálogo comercial.',
+              icon: Icons.add_photo_alternate_outlined,
+              iconColor: Colors.green[700]!,
+              iconBgColor: Colors.green[50]!,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddProductScreen()),
+                );
+              },
             ),
-            const SizedBox(height: 8),
-            const Text('Control global de Rootmie', style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 25),
+            const SizedBox(height: 12),
 
-            Row(
-              children: [
-                _buildStatCard('Productos', '142', Colors.blue, Icons.inventory_2),
-                const SizedBox(width: 15),
-                _buildStatCard('Alertas Stock', '5', Colors.orange, Icons.warning_amber_rounded),
-              ],
+            // 2️ Modificar o Inhabilitar
+            _buildMenuCard(
+              context: context,
+              title: 'Modificar o Inhabilitar ',
+              subtitle: 'Cambia precios, descripciones o estados.',
+              icon: Icons.edit_note_rounded,
+              iconColor: Colors.orange[700]!,
+              iconBgColor: Colors.orange[50]!,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SelectProductScreen()),
+                );
+              },
             ),
-            const SizedBox(height: 25),
+            const SizedBox(height: 12),
 
-            const Text('Acciones del Sistema', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 15),
-
-            // 1. Botón: Agregar nuevo producto o insumo
-            _buildActionButton(
-              Icons.add_photo_alternate_outlined,
-              'Agregar Nuevo Producto',
-              'Sube nuevas plantas o insumos al catálogo comercial.',
-              Colors.green,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => const AddProductScreen())),
+            // 📦 Gestión de Pedidos
+            _buildMenuCard(
+              context: context,
+              title: 'Gestión de Pedidos ',
+              subtitle: 'Valida pagos de clientes y actualiza stock atómicamente.',
+              icon: Icons.receipt_long_rounded,
+              iconColor: Colors.blue[700]!,
+              iconBgColor: Colors.blue[50]!,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AdminOrdersScreen()),
+                );
+              },
             ),
+            const SizedBox(height: 12),
 
-            // 2. Botón: Modificar o Inhabilitar (INTEGRADO CON LA SELECCIÓN VISUAL)
-            _buildActionButton(
-              Icons.edit_note_rounded,
-              'Modificar o Inhabilitar',
-              'Selecciona visualmente un item para cambiar sus datos o estado.',
-              Colors.amber[700]!,
-                  () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SelectProductScreen())),
+            // 3️ Configurar Umbrales de Alertas
+            _buildMenuCard(
+              context: context,
+              title: 'Configurar Umbrales de Alertas ',
+              subtitle: 'Define el stock mínimo permitido.',
+              icon: Icons.notifications_none_rounded,
+              iconColor: Colors.red[700]!,
+              iconBgColor: Colors.red[50]!,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AlertsConfigScreen()),
+                );
+              },
             ),
+            const SizedBox(height: 12),
 
-            // 3. Botón: Configuración de umbrales
-            _buildActionButton(
-              Icons.notifications_active_outlined,
-              'Configurar Umbrales de Alertas',
-              'Define el stock mínimo permitido.',
-              Colors.red,
-                  () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Módulo Alertas: Próximamente'))),
+            // 4️ Validar Reembolsos / Cancelaciones
+            _buildMenuCard(
+              context: context,
+              title: 'Validar Reembolsos/\nCancelaciones ',
+              subtitle: 'Aprobar o rechazar solicitudes de clientes.',
+              icon: Icons.assignment_turned_in_outlined,
+              iconColor: Colors.purple[700]!,
+              iconBgColor: Colors.purple[50]!,
+              onTap: () {
+
+              },
             ),
           ],
         ),
@@ -72,39 +148,42 @@ class AdminScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String count, Color color, IconData icon) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(backgroundColor: color.withOpacity(0.1), child: Icon(icon, color: color)),
-            const SizedBox(height: 15),
-            Text(count, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-            Text(title, style: const TextStyle(color: Colors.grey, fontSize: 14)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, String title, String subtitle, Color color, VoidCallback onTap) {
+  Widget _buildMenuCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
+    required VoidCallback onTap,
+  }) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 1,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: Colors.grey[200]!, width: 1),
+      ),
+      color: Colors.white,
       child: ListTile(
-        leading: CircleAvatar(backgroundColor: color.withOpacity(0.1), child: Icon(icon, color: color)),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap, // Ejecuta la navegación dinámica
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: iconBgColor,
+          child: Icon(icon, color: iconColor, size: 24),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(
+            subtitle,
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.black54),
+        onTap: onTap,
       ),
     );
   }

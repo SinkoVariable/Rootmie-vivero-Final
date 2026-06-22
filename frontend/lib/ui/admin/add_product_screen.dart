@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../inventory/inventory_viewmodel.dart';
 
 class AddProductScreen extends StatefulWidget {
   const AddProductScreen({super.key});
@@ -8,156 +11,198 @@ class AddProductScreen extends StatefulWidget {
 }
 
 class _AddProductScreenState extends State<AddProductScreen> {
-  String _selectedCategory = 'Plantas - Interior';
+  final InventoryViewModel _inventoryVM = InventoryViewModel();
+  final _formKey = GlobalKey<FormState>();
 
-  // Lista expandida para incluir insumos botánicos según el alcance real de Rootmie
-  final List<String> _categories = [
-    'Plantas - Interior',
-    'Plantas - Exterior',
-    'Plantas - Suculentas',
-    'Insumos - Fertilizantes',
-    'Insumos - Herramientas',
-    'Insumos - Tratamientos y Control de Plagas',
-    'Insumos - Sustratos y Macetas'
+  String _nombre = '';
+  String _descripcion = '';
+  String _categoria = 'Plantas de Interior';
+  double _precio = 0.0;
+  int _stock = 0;
+  String _sku = '';
+  bool _isLoading = false;
+
+
+  File? _imagenSeleccionada;
+  final ImagePicker _picker = ImagePicker();
+
+
+  final List<String> _categorias = [
+    'Plantas de Interior',
+    'Exterior',
+    'Cactus',
+    'Fertilizantes',
+    'Herramientas',
+    'Tratamiento',
+    'Macetas',
+    'Decoraciones',
+    'Sustratos'
   ];
+
+  // Abre la galería para que el administrador escoja la foto
+  Future<void> _seleccionarImagen() async {
+    try {
+      final XFile? foto = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70, // Comprime ligeramente la imagen para ahorrar espacio en la nube
+      );
+      if (foto != null) {
+        setState(() {
+          _imagenSeleccionada = File(foto.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error al seleccionar imagen: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Nuevo Item', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blueGrey[900],
-        iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 0,
+        title: const Text('Nuevo Insumo Botánico', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.green[900],
+        elevation: 0.5,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Registrar Producto Comercial 🌿🛠️',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blueGrey),
-            ),
-            const SizedBox(height: 8),
-            const Text('Añade plantas o insumos botánicos al inventario y catálogo.', style: TextStyle(color: Colors.grey)),
-            const SizedBox(height: 25),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Botón interactivo para añadir/mostrar la foto elegida
+              Center(
+                child: GestureDetector(
+                  onTap: _seleccionarImagen,
+                  child: Container(
+                    width: 130,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.grey[300]!, width: 1.5),
+                      image: _imagenSeleccionada != null
+                          ? DecorationImage(image: FileImage(_imagenSeleccionada!), fit: BoxFit.cover)
+                          : null,
+                    ),
+                    child: _imagenSeleccionada == null
+                        ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.add_a_photo_outlined, color: Colors.green[700], size: 36),
+                        const SizedBox(height: 6),
+                        Text('Añadir foto', style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    )
+                        : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 28),
 
-            // Selector de Imagen
-            GestureDetector(
-              onTap: () {},
-              child: Container(
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Nombre del Producto', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                validator: (val) => val == null || val.isEmpty ? 'Campo requerido' : null,
+                onSaved: (val) => _nombre = val ?? '',
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Descripción', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                maxLines: 3,
+                onSaved: (val) => _descripcion = val ?? '',
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _categoria,
+                decoration: InputDecoration(labelText: 'Categoría', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                items: _categorias.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+                onChanged: (val) => setState(() => _categoria = val ?? 'Plantas de Interior'),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      decoration: InputDecoration(labelText: 'Precio (\$)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      keyboardType: TextInputType.number,
+                      validator: (val) => val == null || double.tryParse(val) == null ? 'Precio inválido' : null,
+                      onSaved: (val) => _precio = double.parse(val ?? '0'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      decoration: InputDecoration(labelText: 'Stock Inicial', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      keyboardType: TextInputType.number,
+                      validator: (val) => val == null || int.tryParse(val) == null ? 'Cantidad inválida' : null,
+                      onSaved: (val) => _stock = int.parse(val ?? '0'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Código SKU', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                validator: (val) => val == null || val.isEmpty ? 'Código requerido' : null,
+                onSaved: (val) => _sku = val ?? '',
+              ),
+              const SizedBox(height: 32),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator(color: Colors.green))
+                  : SizedBox(
                 width: double.infinity,
-                height: 130,
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.add_a_photo_outlined, size: 36, color: Colors.green[700]),
-                    const SizedBox(height: 8),
-                    Text('Subir Imagen', style: TextStyle(color: Colors.green[800], fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[700],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    if (_formKey.currentState?.validate() ?? false) {
+                      _formKey.currentState?.save();
+                      setState(() => _isLoading = true);
 
-            _buildTextField('Nombre del Producto', Icons.inventory_2_outlined, 'Ej: Fertilizante Orgánico Nitrógeno u Horquilla'),
-            const SizedBox(height: 15),
+                      //  1. SUBIR LA FOTO
+                      String urlFotoCloud = '';
+                      if (_imagenSeleccionada != null) {
+                        urlFotoCloud = await _inventoryVM.subirImagen(_imagenSeleccionada!, _sku);
+                      }
 
-            // Fila para el Precio y la CANTIDAD (Stock inicial) de forma compacta y elegante
-            Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: _buildTextField('Precio (COP)', Icons.attach_money_rounded, 'Ej: 22000', keyboardType: TextInputType.number),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  flex: 2,
-                  child: _buildTextField('Cantidad (Stock)', Icons.pin_rounded, 'Ej: 50', keyboardType: TextInputType.number),
-                ),
-              ],
-            ),
-            const SizedBox(height: 15),
+                      //  2. AGREGAR PRODUCTO
+                      bool exito = await _inventoryVM.agregarProducto(
+                        nombre: _nombre,
+                        descripcion: _descripcion,
+                        categoria: _categoria,
+                        precio: _precio,
+                        stock: _stock,
+                        sku: _sku,
+                        imagenUrl: urlFotoCloud,
+                      );
 
-            // Dropdown de Categoría Expandida
-            const Text('Categoría del Catálogo', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[400]!),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedCategory,
-                  isExpanded: true,
-                  items: _categories.map((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Text(category, style: const TextStyle(fontSize: 14)),
-                    );
-                  }).toList(),
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedCategory = newValue!;
-                    });
+                      setState(() => _isLoading = false);
+
+                      if (mounted && exito) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Producto añadido con éxito 🌿'), backgroundColor: Colors.green),
+                        );
+                        Navigator.pop(context);
+                      } else if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Error al guardar el producto ❌'), backgroundColor: Colors.red),
+                        );
+                      }
+                    }
                   },
+                  child: const Text('Guardar en Inventario', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
-            ),
-            const SizedBox(height: 15),
-
-            _buildTextField('Descripción y Dosificación / Uso', Icons.description_outlined, 'Detalles del insumo o cuidados de la planta...', maxLines: 3),
-            const SizedBox(height: 30),
-
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green[700],
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('¡Item catalogado con éxito! 🎉'), backgroundColor: Colors.green),
-                  );
-                  Navigator.pop(context);
-                },
-                child: const Text('Guardar en Catálogo', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, IconData icon, String hint, {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blueGrey, fontSize: 14)),
-        const SizedBox(height: 6),
-        TextField(
-          keyboardType: keyboardType,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            hintText: hint,
-            prefixIcon: Icon(icon, color: Colors.green[700]),
-            contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
