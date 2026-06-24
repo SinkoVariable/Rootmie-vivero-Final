@@ -48,7 +48,7 @@ class HelpScreen extends StatelessWidget {
 
             _buildHelpButton(
               context: context,
-              title: 'Solicitud de Reembolso',
+              title: 'Solicitud de reembolso o cancelacion',
               subtitle: 'Reporta inconvenientes con pagos o estados de entrega.',
               icon: Icons.currency_exchange_rounded,
               color: Colors.amber[800]!,
@@ -226,7 +226,7 @@ class RefundFormScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // 🛠️ Dropdown Reembolsos Corregido preventivamente para evitar desbordes
+
             DropdownButtonFormField<String>(
               isExpanded: true,
               decoration: InputDecoration(labelText: 'Causa del Reembolso', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),

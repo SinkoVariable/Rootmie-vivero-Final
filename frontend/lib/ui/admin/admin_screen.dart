@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'add_product_screen.dart';
-import 'select_product_screen.dart';
-import 'alerts_config_screen.dart';
+import 'inventory_management_screen.dart';
 import 'admin_orders_screen.dart';
 import 'suppliers_screen.dart';
 
@@ -63,35 +61,17 @@ class AdminScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Column(
           children: [
-
             _buildMenuCard(
               context: context,
-              title: 'Agregar Nuevo Producto ',
-              subtitle: 'Sube nuevas plantas al catálogo comercial.',
-              icon: Icons.add_photo_alternate_outlined,
-              iconColor: Colors.green[700]!,
-              iconBgColor: Colors.green[50]!,
+              title: 'Gestión de Inventario',
+              subtitle: 'Altas, modificaciones y alertas críticas de stock.',
+              icon: Icons.inventory_rounded,
+              iconColor: const Color(0xFF00796B),
+              iconBgColor: const Color(0xFFE0F2F1),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AddProductScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-
-            // 2️⃣ Modificar o Inhabilitar
-            _buildMenuCard(
-              context: context,
-              title: 'Modificar o Inhabilitar ',
-              subtitle: 'Cambia precios, descripciones o estados.',
-              icon: Icons.edit_note_rounded,
-              iconColor: Colors.orange[700]!,
-              iconBgColor: Colors.orange[50]!,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SelectProductScreen()),
+                  MaterialPageRoute(builder: (context) => const InventoryManagementScreen()),
                 );
               },
             ),
@@ -101,7 +81,7 @@ class AdminScreen extends StatelessWidget {
             _buildMenuCard(
               context: context,
               title: 'Gestión de Pedidos ',
-              subtitle: 'Valida pagos de clientes y actualiza stock atómicamente.',
+              subtitle: 'Gestiona los pedidos de los clientes manualmente.',
               icon: Icons.receipt_long_rounded,
               iconColor: Colors.blue[700]!,
               iconBgColor: Colors.blue[50]!,
@@ -126,23 +106,6 @@ class AdminScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const SuppliersScreen()),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-
-
-            _buildMenuCard(
-              context: context,
-              title: 'Configurar Umbrales de Alertas ',
-              subtitle: 'Define el stock mínimo permitido.',
-              icon: Icons.notifications_none_rounded,
-              iconColor: Colors.red[700]!,
-              iconBgColor: Colors.red[50]!,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const AlertsConfigScreen()),
                 );
               },
             ),

@@ -12,8 +12,6 @@ import 'product_detail_screen.dart';
 import 'cart_screen.dart';
 import 'cart_viewmodel.dart';
 import 'profile_screen.dart';
-// 🌿 Si tu LoginScreen está en otra carpeta, asegúrate de importarlo aquí:
-// import '../auth/login_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   final String userRole;
@@ -34,7 +32,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
     _filterCategories = ['Todas', ...rootmieCategories];
   }
 
-  // 🟢 MÉTODO OPTIMIZADO PARA ELIMINAR EL LOOP INFINITO
   void _mostrarDialogoCerrarSesion(BuildContext contextScaffold) {
     showDialog(
       context: contextScaffold,
@@ -53,16 +50,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
-              // 1. Cerramos el modal primero
               Navigator.pop(contextDialog);
-
-              // 2. Apagamos la sesión en Firebase
               await FirebaseAuth.instance.signOut();
 
-              // 3. Forzamos un reinicio limpio del árbol de navegación
               if (contextScaffold.mounted) {
                 Navigator.of(contextScaffold).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const LoginScreen()), // 👈 Usa aquí tu clase de Login real
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
                       (Route<dynamic> route) => false,
                 );
               }
@@ -102,7 +95,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 );
               },
             ),
-
           IconButton(
             icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
             tooltip: 'Mi Perfil',
@@ -113,7 +105,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
               );
             },
           ),
-
           ListenableBuilder(
             listenable: _cartVM,
             builder: (context, child) {
@@ -148,7 +139,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
               );
             },
           ),
-
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white70, size: 24),
             tooltip: 'Cerrar Sesión',
@@ -192,7 +182,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   },
                 ),
               ),
-
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -214,20 +203,25 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
                       final List<ProductModel> productosActivos = [];
 
+
+                      debugPrint('============= INICIO CARGA FIRESTORE =============');
                       for (var doc in snapshot.data!.docs) {
                         final data = doc.data() as Map<String, dynamic>;
                         final bool activo = data['activo'] ?? true;
 
-                        if (!activo) {
-                          continue;
-                        }
+                        final String rawNombre = data['nombre'] ?? 'Sin nombre';
+                        final String rawCat = data['categoria'] ?? data['categoría'] ?? data['category'] ?? 'NULO';
+
+                        debugPrint('ID: ${doc.id} | PRODUCTO: $rawNombre | CATEGORÍA EN BD: "$rawCat" | ACTIVO: $activo');
+
+                        if (!activo) continue;
 
                         productosActivos.add(
                           ProductModel(
                             id: doc.id,
-                            nombre: data['nombre'] ?? data['name'] ?? 'Sin nombre',
+                            nombre: rawNombre,
                             descripcion: data['descripcion'] ?? data['description'] ?? '',
-                            categoria: data['categoria'] ?? data['category'] ?? 'Plantas de Interior',
+                            categoria: rawCat == 'NULO' ? 'Plantas de Interior' : rawCat,
                             precio: (data['precio'] ?? data['price'] ?? 0).toDouble(),
                             stock: data['stock'] ?? 0,
                             sku: data['sku'] ?? '',
@@ -235,17 +229,32 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           ),
                         );
                       }
+                      debugPrint('================ FIN CARGA FIRESTORE ================');
+
 
                       final productosFiltrados = productosActivos.where((plant) {
-                        if (_viewModel.selectedCategory.trim().toLowerCase() == 'todas') return true;
-                        return plant.categoria.trim().toLowerCase() == _viewModel.selectedCategory.trim().toLowerCase();
+                        final seleccionada = _viewModel.selectedCategory.trim().toLowerCase();
+                        if (seleccionada == 'todas') return true;
+
+                        final categoriaProducto = plant.categoria.trim().toLowerCase();
+
+
+                        if (categoriaProducto == seleccionada) return true;
+                        if (categoriaProducto.contains(seleccionada) || seleccionada.contains(categoriaProducto)) return true;
+
+
+                        final palabrasSeleccionadas = seleccionada.split(' ').where((w) => w.length > 3).toList();
+                        final palabrasProducto = categoriaProducto.split(' ');
+
+                        return palabrasSeleccionadas.any((palabra) => palabrasProducto.contains(palabra));
                       }).toList();
 
                       if (productosFiltrados.isEmpty) {
-                        return const Center(
+                        return Center(
                           child: Text(
-                            'No hay plantas disponibles en esta categoría 🌿',
-                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                            'No hay plantas disponibles en "${_viewModel.selectedCategory}" 🌿\n(Revisa la consola para ver qué dice tu base de datos)',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.grey, fontSize: 14, height: 1.5),
                           ),
                         );
                       }
@@ -351,4 +360,3 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 }
-

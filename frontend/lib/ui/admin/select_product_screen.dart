@@ -97,6 +97,8 @@ class SelectProductScreen extends StatelessWidget {
                                 child: Icon(_obtenerIconoCategoria(categoria), color: Colors.green[800]),
                               ),
                               const SizedBox(width: 16),
+
+                              // 🟢 EXPANDED CENTRAL: Protege que el nombre y metadatos no empujen la UI
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,17 +110,23 @@ class SelectProductScreen extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 6),
+
+                                    // 🟢 ROW COMPARTIDO INTERNO CON CONTENCIÓN
                                     Row(
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[200],
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            categoria,
-                                            style: const TextStyle(fontSize: 11, color: Colors.black54),
+                                        Flexible(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[200],
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              categoria,
+                                              style: const TextStyle(fontSize: 11, color: Colors.black54),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 10),
@@ -135,13 +143,19 @@ class SelectProductScreen extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 12),
+
+                              // 🟢 BLOQUE DE PRECIO SEGURO Y FLEXIBLE
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    '\$${precio.toStringAsFixed(0)}',
-                                    style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 15),
+                                  Flexible(
+                                    child: Text(
+                                      '\$${precio.toStringAsFixed(0)}',
+                                      style: TextStyle(color: Colors.green[700], fontWeight: FontWeight.bold, fontSize: 15),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.fade,
+                                    ),
                                   ),
                                   const SizedBox(width: 4),
                                   const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
@@ -214,7 +228,6 @@ class SelectProductScreen extends StatelessWidget {
       },
     );
   }
-
 
   IconData _obtenerIconoCategoria(String categoria) {
     switch (categoria.toLowerCase().trim()) {
