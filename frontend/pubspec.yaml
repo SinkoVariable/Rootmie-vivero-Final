@@ -34,6 +34,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # 🟢 CONTEXTO DE ASSETS CORREGIDO E INDENTADO A 2 ESPACIOS
+  # El guion (-) debe tener exactamente 4 espacios de sangría
   assets:
     - assets/logo/logo_rootmie.png
