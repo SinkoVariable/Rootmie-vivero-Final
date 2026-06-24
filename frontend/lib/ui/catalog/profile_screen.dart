@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'customer_orders_screen.dart';
+import '../profile/help_screen.dart';
+import '../profile/botanic_consult_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -9,7 +11,6 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
 
     final User? usuarioActual = FirebaseAuth.instance.currentUser;
-
 
     final String nombreUsuario = usuarioActual?.displayName ?? 'Cliente Rootmie 🌿';
     final String correoUsuario = usuarioActual?.email ?? 'sin_correo@rootmie.com';
@@ -69,7 +70,6 @@ class ProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: Column(
@@ -103,14 +103,39 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
 
+
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 1,
+                    child: ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: Colors.green[50], shape: BoxShape.circle),
+                        child: const Icon(Icons.psychology_alt_outlined, color: Colors.green),
+                      ),
+                      title: const Text('Asesoría Botánica', style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Programa una cita virtual para el cuidado de tus plantas'),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const BotanicConsultScreen()),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
 
                   const Text(
                     'Soporte',
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueGrey),
                   ),
                   const SizedBox(height: 12),
+
+
                   Card(
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 1,
@@ -124,8 +149,9 @@ class ProfileScreen extends StatelessWidget {
                       subtitle: const Text('¿Problemas con tu despacho? Escríbenos'),
                       trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Soporte Rootmie activado 💬')),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HelpScreen()),
                         );
                       },
                     ),

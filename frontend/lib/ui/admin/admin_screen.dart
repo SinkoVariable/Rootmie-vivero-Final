@@ -4,6 +4,7 @@ import 'add_product_screen.dart';
 import 'select_product_screen.dart';
 import 'alerts_config_screen.dart';
 import 'admin_orders_screen.dart';
+import 'suppliers_screen.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
@@ -62,7 +63,7 @@ class AdminScreen extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Column(
           children: [
-            // 1️ Agregar Nuevo Producto
+
             _buildMenuCard(
               context: context,
               title: 'Agregar Nuevo Producto ',
@@ -79,7 +80,7 @@ class AdminScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 2️ Modificar o Inhabilitar
+            // 2️⃣ Modificar o Inhabilitar
             _buildMenuCard(
               context: context,
               title: 'Modificar o Inhabilitar ',
@@ -96,7 +97,7 @@ class AdminScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 📦 Gestión de Pedidos
+
             _buildMenuCard(
               context: context,
               title: 'Gestión de Pedidos ',
@@ -113,7 +114,24 @@ class AdminScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 3️ Configurar Umbrales de Alertas
+
+            _buildMenuCard(
+              context: context,
+              title: 'Administrar Proveedores ',
+              subtitle: 'Directorio informativo de aliados comerciales e insumos.',
+              icon: Icons.storefront_rounded,
+              iconColor: Colors.teal[700]!,
+              iconBgColor: Colors.teal[50]!,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SuppliersScreen()),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+
+
             _buildMenuCard(
               context: context,
               title: 'Configurar Umbrales de Alertas ',
@@ -130,7 +148,7 @@ class AdminScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // 4️ Validar Reembolsos / Cancelaciones
+
             _buildMenuCard(
               context: context,
               title: 'Validar Reembolsos/\nCancelaciones ',

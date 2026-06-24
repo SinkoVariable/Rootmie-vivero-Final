@@ -104,7 +104,7 @@ class _CartScreenState extends State<CartScreen> {
                             if (_formKey.currentState!.validate()) {
                               Navigator.pop(context);
 
-                              // EMAIL DEL USUARIO AUTENTICADO
+
                               final String emailActual = FirebaseAuth.instance.currentUser?.email ?? 'anonimo@rootmie.com';
 
 

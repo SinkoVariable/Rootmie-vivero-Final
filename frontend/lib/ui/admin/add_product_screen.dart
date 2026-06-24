@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../inventory/inventory_viewmodel.dart';
@@ -19,13 +20,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
   String _categoria = 'Plantas de Interior';
   double _precio = 0.0;
   int _stock = 0;
-  String _sku = '';
   bool _isLoading = false;
-
 
   File? _imagenSeleccionada;
   final ImagePicker _picker = ImagePicker();
-
 
   final List<String> _categorias = [
     'Plantas de Interior',
@@ -39,12 +37,24 @@ class _AddProductScreenState extends State<AddProductScreen> {
     'Sustratos'
   ];
 
-  // Abre la galería para que el administrador escoja la foto
+
+  String _generarSKUAutomatico() {
+    final random = Random();
+
+    const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    String resultado = '';
+    for (int i = 0; i < 6; i++) {
+      resultado += caracteres[random.nextInt(caracteres.length)];
+    }
+    return 'RM-$resultado';
+  }
+
+
   Future<void> _seleccionarImagen() async {
     try {
       final XFile? foto = await _picker.pickImage(
         source: ImageSource.gallery,
-        imageQuality: 70, // Comprime ligeramente la imagen para ahorrar espacio en la nube
+        imageQuality: 70,
       );
       if (foto != null) {
         setState(() {
@@ -73,7 +83,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Botón interactivo para añadir/mostrar la foto elegida
+
               Center(
                 child: GestureDetector(
                   onTap: _seleccionarImagen,
@@ -143,12 +153,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: InputDecoration(labelText: 'Código SKU', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                validator: (val) => val == null || val.isEmpty ? 'Código requerido' : null,
-                onSaved: (val) => _sku = val ?? '',
-              ),
               const SizedBox(height: 32),
               _isLoading
                   ? const Center(child: CircularProgressIndicator(color: Colors.green))
@@ -165,20 +169,23 @@ class _AddProductScreenState extends State<AddProductScreen> {
                       _formKey.currentState?.save();
                       setState(() => _isLoading = true);
 
-                      //  1. SUBIR LA FOTO
+
+                      final String skuAutomatico = _generarSKUAutomatico();
+
+
                       String urlFotoCloud = '';
                       if (_imagenSeleccionada != null) {
-                        urlFotoCloud = await _inventoryVM.subirImagen(_imagenSeleccionada!, _sku);
+                        urlFotoCloud = await _inventoryVM.subirImagen(_imagenSeleccionada!, skuAutomatico);
                       }
 
-                      //  2. AGREGAR PRODUCTO
+                      // 2. AGREGAR PRODUCTO A FIRESTORE
                       bool exito = await _inventoryVM.agregarProducto(
                         nombre: _nombre,
                         descripcion: _descripcion,
                         categoria: _categoria,
                         precio: _precio,
                         stock: _stock,
-                        sku: _sku,
+                        sku: skuAutomatico,
                         imagenUrl: urlFotoCloud,
                       );
 
@@ -186,7 +193,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
                       if (mounted && exito) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Producto añadido con éxito 🌿'), backgroundColor: Colors.green),
+                          SnackBar(content: Text('Producto registrado con éxito como $skuAutomatico 🌿'), backgroundColor: Colors.green),
                         );
                         Navigator.pop(context);
                       } else if (mounted) {

@@ -4,15 +4,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'catalog_viewmodel.dart';
 import 'categories_data.dart';
 
-
 import '../admin/admin_screen.dart';
 import '../botanic/botanic_screen.dart';
 import '../../../data/models/product_model.dart';
-
+import '../login/login_screen.dart';
 import 'product_detail_screen.dart';
 import 'cart_screen.dart';
 import 'cart_viewmodel.dart';
 import 'profile_screen.dart';
+// 🌿 Si tu LoginScreen está en otra carpeta, asegúrate de importarlo aquí:
+// import '../auth/login_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
   final String userRole;
@@ -33,7 +34,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     _filterCategories = ['Todas', ...rootmieCategories];
   }
 
-
+  // 🟢 MÉTODO OPTIMIZADO PARA ELIMINAR EL LOOP INFINITO
   void _mostrarDialogoCerrarSesion(BuildContext contextScaffold) {
     showDialog(
       context: contextScaffold,
@@ -52,13 +53,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () async {
+              // 1. Cerramos el modal primero
               Navigator.pop(contextDialog);
 
+              // 2. Apagamos la sesión en Firebase
               await FirebaseAuth.instance.signOut();
 
+              // 3. Forzamos un reinicio limpio del árbol de navegación
               if (contextScaffold.mounted) {
-
-                Navigator.of(contextScaffold).pushNamedAndRemoveUntil('/', (route) => false);
+                Navigator.of(contextScaffold).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()), // 👈 Usa aquí tu clase de Login real
+                      (Route<dynamic> route) => false,
+                );
               }
             },
             child: const Text('Salir', style: TextStyle(color: Colors.white)),
@@ -97,7 +103,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
               },
             ),
 
-
           IconButton(
             icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 26),
             tooltip: 'Mi Perfil',
@@ -108,7 +113,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
               );
             },
           ),
-
 
           ListenableBuilder(
             listenable: _cartVM,
@@ -145,7 +149,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
             },
           ),
 
-
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white70, size: 24),
             tooltip: 'Cerrar Sesión',
@@ -158,7 +161,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
         builder: (context, child) {
           return Column(
             children: [
-
               Container(
                 height: 60,
                 padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -191,7 +193,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 ),
               ),
 
-
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -211,16 +212,12 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         );
                       }
 
-
                       final List<ProductModel> productosActivos = [];
 
                       for (var doc in snapshot.data!.docs) {
                         final data = doc.data() as Map<String, dynamic>;
-
-
                         final bool activo = data['activo'] ?? true;
 
-                        //  Si el producto fue inhabilitado (activo == false), lo saltamos del catálogo
                         if (!activo) {
                           continue;
                         }
@@ -239,7 +236,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
                         );
                       }
 
-                      // Filtro secundario por categoría seleccionada en la UI
                       final productosFiltrados = productosActivos.where((plant) {
                         if (_viewModel.selectedCategory.trim().toLowerCase() == 'todas') return true;
                         return plant.categoria.trim().toLowerCase() == _viewModel.selectedCategory.trim().toLowerCase();
@@ -355,3 +351,4 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 }
+

@@ -7,7 +7,7 @@ class BotanicScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2, // 👈 Dos pestañas: Pedidos e Inventario
+      length: 3,
       child: Scaffold(
         backgroundColor: Colors.grey[50],
         appBar: AppBar(
@@ -21,7 +21,6 @@ class BotanicScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.exit_to_app, color: Colors.white),
               onPressed: () {
-
                 Navigator.pop(context);
               },
             )
@@ -33,6 +32,7 @@ class BotanicScreen extends StatelessWidget {
             tabs: [
               Tab(icon: Icon(Icons.local_shipping_outlined), text: 'Pedidos'),
               Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Vivero'),
+              Tab(icon: Icon(Icons.video_camera_front_outlined), text: 'Asesorías'),
             ],
           ),
         ),
@@ -40,6 +40,7 @@ class BotanicScreen extends StatelessWidget {
           children: [
             _PedidosTab(),
             _ViveroStockTab(),
+            _AsesoriasTab(),
           ],
         ),
       ),
@@ -47,7 +48,7 @@ class BotanicScreen extends StatelessWidget {
   }
 }
 
-// ==================== 👀 PESTAÑA 1: RECIBIR Y CAMBIAR ESTADO DE PEDIDOS ====================
+
 class _PedidosTab extends StatelessWidget {
   const _PedidosTab();
 
@@ -137,7 +138,6 @@ class _ViveroStockTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Encabezado idéntico a tu diseño
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -162,7 +162,6 @@ class _ViveroStockTab extends StatelessWidget {
           ),
         ),
 
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: TextField(
@@ -180,7 +179,6 @@ class _ViveroStockTab extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        //  Lista Dinámica conectada a Firestore
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance.collection('productos').snapshots(),
@@ -203,7 +201,6 @@ class _ViveroStockTab extends StatelessWidget {
                   final String nombre = data['nombre'] ?? 'Planta';
                   final int stock = data['stock'] ?? 0;
 
-
                   Color indicadorColor = Colors.green;
                   if (stock <= 5 && stock > 0) indicadorColor = Colors.orange;
                   if (stock == 0) indicadorColor = Colors.red;
@@ -217,7 +214,6 @@ class _ViveroStockTab extends StatelessWidget {
                     child: IntrinsicHeight(
                       child: Row(
                         children: [
-
                           Container(
                             width: 6,
                             decoration: BoxDecoration(
@@ -255,7 +251,7 @@ class _ViveroStockTab extends StatelessWidget {
                             child: TextButton.icon(
                               onPressed: () => _mostrarDialogoConsolidacion(context, id, nombre, stock),
                               style: TextButton.styleFrom(
-                                backgroundColor: const Color(0xFFE0F2F1), // Fondo aqua claro
+                                backgroundColor: const Color(0xFFE0F2F1),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                               ),
@@ -279,7 +275,6 @@ class _ViveroStockTab extends StatelessWidget {
     );
   }
 
-  //  para actualizar el Stock físico real
   void _mostrarDialogoConsolidacion(BuildContext context, String productoId, String nombrePlanta, int stockActual) {
     final cantidadController = TextEditingController();
 
@@ -318,6 +313,65 @@ class _ViveroStockTab extends StatelessWidget {
               }
             },
             child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+class _AsesoriasTab extends StatelessWidget {
+  const _AsesoriasTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 45,
+            backgroundColor: Colors.indigo.withOpacity(0.1),
+            child: const Icon(Icons.video_camera_front_outlined, size: 45, color: Colors.indigo),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Administración de Asesorías',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Desde aquí podrás gestionar las asesorias agendadas por los clientes y asignar los expertos del vivero.',
+              textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.grey[600], fontSize: 14, height: 1.3),
+          ),
+          const SizedBox(height: 32),
+
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo[700],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.lock_open_rounded, color: Colors.white),
+              label: const Text(
+                'Abrir Panel de Citas',
+                style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Hola'),
+                    backgroundColor: Colors.indigo,
+                  ),
+                );
+              },
+            ),
           ),
         ],
       ),

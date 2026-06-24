@@ -155,7 +155,7 @@ class AlertsConfigScreen extends StatelessWidget {
 
                 Row(
                   children: [
-                    // Campo: Stock Mínimo
+
                     Expanded(
                       child: TextFormField(
                         initialValue: minActual.toString(),

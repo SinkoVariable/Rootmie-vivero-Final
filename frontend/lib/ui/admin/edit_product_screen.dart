@@ -234,7 +234,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  //  ELIMINAR COMPLETAMENTE
+
                   SizedBox(
                     width: double.infinity,
                     height: 50,
