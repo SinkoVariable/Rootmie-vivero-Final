@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../data/models/product_model.dart';
 import 'cart_viewmodel.dart';
+
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
 
@@ -11,12 +12,10 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
-
   int _cantidad = 1;
 
   @override
   Widget build(BuildContext context) {
-
     final int stockMinimo = (widget.product as dynamic).toString().contains('stockMinimo')
         ? (widget.product as dynamic).stockMinimo ?? 5
         : 5;
@@ -31,18 +30,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.black87),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Container(
               height: 300,
               width: double.infinity,
@@ -57,13 +49,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               )
                   : const Icon(Icons.eco_outlined, color: Colors.green, size: 80),
             ),
-
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -76,22 +66,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-
                   Text(
                     widget.product.nombre,
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                   const SizedBox(height: 8),
-
-
                   Text(
                     '\$${widget.product.precio.toStringAsFixed(0)} COP',
                     style: TextStyle(color: Colors.green[700], fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-
-
                   Row(
                     children: [
                       Text('SKU: ${widget.product.sku}', style: const TextStyle(color: Colors.grey, fontSize: 13)),
@@ -114,8 +98,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ],
                   ),
                   const Divider(height: 32),
-
-                  // Descripción
                   const Text(
                     'Descripción',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey),
@@ -128,8 +110,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     style: TextStyle(color: Colors.grey[700], fontSize: 14, height: 1.5),
                   ),
                   const SizedBox(height: 40),
-
-
                   Row(
                     children: [
                       const Text(
@@ -164,8 +144,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-
-
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -182,9 +160,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       onPressed: widget.product.stock > 0
                           ? () {
-
                         CartViewModel().agregarProducto(widget.product, cantidadSolicitada: _cantidad);
-
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
